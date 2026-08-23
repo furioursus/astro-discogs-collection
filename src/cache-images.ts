@@ -2,14 +2,20 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { loadCollection, loadWantlist } from './collection-data.js';
 import { getConfig } from './config.js';
+import { coverImageFilename } from './slug.js';
+import type { DiscogsRelease } from './types.js';
 
 // Downloads each release's cover art to the configured imageCacheDir
-// (default: src/assets/discogs-collection/cover-images/{releaseId}.jpg) so
+// (default: src/assets/discogs-collection/cover-images/{artist}_{title}-{releaseId}.jpg) so
 // it's available as a local file for Astro's <Image>/<Picture> components,
 // which only optimize local/imported images, not arbitrary remote URLs.
 // Called by the integration's astro:build:start / astro:server:setup hooks.
 // Safe to call repeatedly — already-downloaded files are skipped, so this
 // is a persistent cache across builds, not a full re-download every time.
+//
+// Note: if a release's artist/title changes on Discogs between builds, the filename changes
+// too, so the old file is orphaned rather than renamed — harmless, just a bit of stale disk
+// usage in an already-regenerable cache dir.
 
 const CONCURRENCY = 6;
 
@@ -48,9 +54,11 @@ export async function cacheCoverImages(log: (message: string) => void = () => {}
     return { total: 0, downloaded: 0, alreadyCached: 0, failed: 0 };
   }
 
-  const uniqueImages = new Map<string, string>(); // releaseId -> cover image URL
-  for (const release of [...collection.releases, ...wantlist.releases]) {
-    if (release.coverImageUrl) uniqueImages.set(String(release.id), release.coverImageUrl);
+  const uniqueImages = new Map<string, { url: string; filename: string }>(); // releaseId -> cover image URL + target filename
+  for (const release of [...collection.releases, ...wantlist.releases] as DiscogsRelease[]) {
+    if (release.coverImageUrl) {
+      uniqueImages.set(String(release.id), { url: release.coverImageUrl, filename: coverImageFilename(release) });
+    }
   }
 
   if (uniqueImages.size === 0) {
@@ -60,7 +68,7 @@ export async function cacheCoverImages(log: (message: string) => void = () => {}
   await fs.mkdir(imageCacheDir, { recursive: true });
   const existing = new Set(await fs.readdir(imageCacheDir));
 
-  const toDownload = Array.from(uniqueImages.entries()).filter(([id]) => !existing.has(`${id}.jpg`));
+  const toDownload = Array.from(uniqueImages.entries()).filter(([, { filename }]) => !existing.has(filename));
   const alreadyCached = uniqueImages.size - toDownload.length;
 
   if (toDownload.length === 0) {
@@ -72,9 +80,9 @@ export async function cacheCoverImages(log: (message: string) => void = () => {}
   let downloaded = 0;
   let failed = 0;
 
-  await pooledForEach(toDownload, CONCURRENCY, async ([id, url]) => {
+  await pooledForEach(toDownload, CONCURRENCY, async ([id, { url, filename }]) => {
     try {
-      await downloadImage(url, path.join(imageCacheDir, `${id}.jpg`), userAgent);
+      await downloadImage(url, path.join(imageCacheDir, filename), userAgent);
     } catch (err) {
       failed += 1;
       log(`Failed to download cover for release ${id}: ${err instanceof Error ? err.message : err}`);
