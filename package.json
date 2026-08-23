@@ -21,8 +21,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && cp src/client.d.ts dist/client.d.ts",
-    "prepare": "npm run build"
+    "build": "tsc && cp src/client.d.ts dist/client.d.ts"
   },
   "peerDependencies": {
     "astro": "^7.0.0"
