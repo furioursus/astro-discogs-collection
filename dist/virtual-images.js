@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { normalizePath } from 'vite';
 import { getConfig } from './config.js';
+import { releaseIdFromCoverFilename } from './slug.js';
 // Exposes every cached cover image as a real ESM import so Astro/Vite's
 // asset pipeline optimizes it, without requiring a compile-time-static
 // glob pattern (which couldn't reference the user-configurable
@@ -34,7 +35,9 @@ export function discogsCollectionImagesPlugin() {
             const imports = [];
             const entries = [];
             files.forEach((file, index) => {
-                const releaseId = file.slice(0, -'.jpg'.length);
+                const releaseId = releaseIdFromCoverFilename(file);
+                if (!releaseId)
+                    return; // not a file this cache manages (e.g. leftover from before a naming change)
                 const varName = `coverImage${index}`;
                 const absolutePath = normalizePath(path.join(imageCacheDir, file));
                 imports.push(`import ${varName} from ${JSON.stringify(absolutePath)};`);
