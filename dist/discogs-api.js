@@ -70,6 +70,8 @@ function normalizeCollectionRelease(raw) {
         rating: raw.rating,
         notes: null,
         source: 'collection',
+        priceSuggestions: null,
+        averagePrice: null,
     };
 }
 function normalizeWantlistRelease(raw) {
@@ -80,6 +82,8 @@ function normalizeWantlistRelease(raw) {
         rating: raw.rating,
         notes: raw.notes ?? null,
         source: 'wantlist',
+        priceSuggestions: null,
+        averagePrice: null,
     };
 }
 /**
@@ -95,4 +99,31 @@ export async function fetchCollection(username, folderId) {
 export async function fetchWantlist(username) {
     const raw = await paginate((page) => `${API_ROOT}/users/${encodeURIComponent(username)}/wants?page=${page}&per_page=${PER_PAGE}`, (response) => response.wants);
     return raw.map(normalizeWantlistRelease);
+}
+/**
+ * Fetches Discogs's suggested price per condition grade for one release.
+ * There's no bulk version of this endpoint — it's one request per release,
+ * which is why `includePrices` is opt-in and cached separately (see
+ * collection-data.ts). Returns null if Discogs has no suggestions for this
+ * release (e.g. not enough sales history) — a 404 here is an expected
+ * outcome, not a failure; other errors (bad token, network) still throw.
+ */
+export async function fetchPriceSuggestions(releaseId) {
+    const { token, userAgent } = getConfig();
+    const url = `${API_ROOT}/marketplace/price_suggestions/${releaseId}`;
+    const response = await fetch(url, {
+        headers: { Authorization: `Discogs token=${token}`, 'User-Agent': userAgent },
+    });
+    if (response.status === 404)
+        return null;
+    if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new Error(`Discogs API error (${response.status}): ${response.statusText}${body ? `\n${body}` : ''} — ${url}`);
+    }
+    const remaining = Number(response.headers.get('X-Discogs-Ratelimit-Remaining'));
+    if (Number.isFinite(remaining) && remaining <= 2) {
+        await sleep(2000);
+    }
+    const suggestions = (await response.json());
+    return Object.keys(suggestions).length > 0 ? suggestions : null;
 }

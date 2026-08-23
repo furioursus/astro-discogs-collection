@@ -22,6 +22,10 @@ function matchesWhere(release, where) {
         return false;
     if (where.minRating !== undefined && release.rating < where.minRating)
         return false;
+    if (where.minPrice !== undefined && (release.averagePrice ?? -Infinity) < where.minPrice)
+        return false;
+    if (where.maxPrice !== undefined && (release.averagePrice ?? Infinity) > where.maxPrice)
+        return false;
     return true;
 }
 function compareBy(a, b, field) {
@@ -36,6 +40,10 @@ function compareBy(a, b, field) {
             return (a.dateAdded ?? '').localeCompare(b.dateAdded ?? '');
         case 'rating':
             return a.rating - b.rating;
+        case 'price':
+            // Releases with no price data sort first ascending (last descending,
+            // since the whole result is reversed for 'desc') rather than being dropped.
+            return (a.averagePrice ?? -Infinity) - (b.averagePrice ?? -Infinity);
     }
 }
 /**

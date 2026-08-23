@@ -15,8 +15,16 @@ export interface DiscogsWhere {
     minYear?: number;
     maxYear?: number;
     minRating?: number;
+    /**
+     * Filters on `averagePrice` — only meaningful when the integration's
+     * `includePrices` option is on. A release with no price data (either
+     * because prices weren't fetched, or Discogs has none for it) is excluded
+     * by either bound, same as an unknown value failing a range check.
+     */
+    minPrice?: number;
+    maxPrice?: number;
 }
-export type SortField = 'artist' | 'title' | 'year' | 'dateAdded' | 'rating';
+export type SortField = 'artist' | 'title' | 'year' | 'dateAdded' | 'rating' | 'price';
 export type SortOrder = 'asc' | 'desc';
 export interface QueryOptions {
     where?: DiscogsWhere;

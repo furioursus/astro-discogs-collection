@@ -16,9 +16,17 @@ export interface DiscogsWhere {
   minYear?: number;
   maxYear?: number;
   minRating?: number;
+  /**
+   * Filters on `averagePrice` — only meaningful when the integration's
+   * `includePrices` option is on. A release with no price data (either
+   * because prices weren't fetched, or Discogs has none for it) is excluded
+   * by either bound, same as an unknown value failing a range check.
+   */
+  minPrice?: number;
+  maxPrice?: number;
 }
 
-export type SortField = 'artist' | 'title' | 'year' | 'dateAdded' | 'rating';
+export type SortField = 'artist' | 'title' | 'year' | 'dateAdded' | 'rating' | 'price';
 export type SortOrder = 'asc' | 'desc';
 
 export interface QueryOptions {
@@ -44,6 +52,8 @@ function matchesWhere(release: DiscogsRelease, where: DiscogsWhere): boolean {
   if (where.minYear !== undefined && release.year < where.minYear) return false;
   if (where.maxYear !== undefined && release.year > where.maxYear) return false;
   if (where.minRating !== undefined && release.rating < where.minRating) return false;
+  if (where.minPrice !== undefined && (release.averagePrice ?? -Infinity) < where.minPrice) return false;
+  if (where.maxPrice !== undefined && (release.averagePrice ?? Infinity) > where.maxPrice) return false;
   return true;
 }
 
@@ -59,6 +69,10 @@ function compareBy(a: DiscogsRelease, b: DiscogsRelease, field: SortField): numb
       return (a.dateAdded ?? '').localeCompare(b.dateAdded ?? '');
     case 'rating':
       return a.rating - b.rating;
+    case 'price':
+      // Releases with no price data sort first ascending (last descending,
+      // since the whole result is reversed for 'desc') rather than being dropped.
+      return (a.averagePrice ?? -Infinity) - (b.averagePrice ?? -Infinity);
   }
 }
 

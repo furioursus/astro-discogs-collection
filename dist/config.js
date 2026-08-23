@@ -5,6 +5,8 @@ const DEFAULTS = {
     imageCacheDir: 'src/assets/discogs-collection/cover-images',
     cachePath: '.cache/discogs-collection/cache.json',
     cacheTtlHours: 6,
+    includePrices: false,
+    priceCacheTtlHours: 24,
 };
 function resolve(root, options) {
     const username = options.username ?? process.env.DISCOGS_USERNAME ?? '';
@@ -18,6 +20,8 @@ function resolve(root, options) {
         imageCacheDir: path.resolve(root, options.imageCacheDir ?? DEFAULTS.imageCacheDir),
         cachePath: path.resolve(root, options.cachePath ?? DEFAULTS.cachePath),
         cacheTtlHours: options.cacheTtlHours ?? DEFAULTS.cacheTtlHours,
+        includePrices: options.includePrices ?? DEFAULTS.includePrices,
+        priceCacheTtlHours: options.priceCacheTtlHours ?? DEFAULTS.priceCacheTtlHours,
         missingConfig: !username || !token,
     };
 }

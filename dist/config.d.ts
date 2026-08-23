@@ -18,6 +18,16 @@ export interface DiscogsCollectionOptions {
     cachePath?: string;
     /** How long cached API responses stay valid, in hours. Default: 6. */
     cacheTtlHours?: number;
+    /**
+     * Fetch Discogs's price suggestions for every release, populating
+     * `priceSuggestions`/`averagePrice`. Default: false. This costs one extra
+     * API request per release (there's no bulk endpoint for it), so it's
+     * opt-in — for a large collection this can take a while and eat into the
+     * rate limit even with caching. Off by default.
+     */
+    includePrices?: boolean;
+    /** How long cached price suggestions stay valid, in hours. Kept separate from `cacheTtlHours` since prices are worth caching longer — they change less often and cost more to re-fetch. Default: 24. */
+    priceCacheTtlHours?: number;
 }
 export interface ResolvedConfig {
     root: string;
@@ -28,6 +38,8 @@ export interface ResolvedConfig {
     imageCacheDir: string;
     cachePath: string;
     cacheTtlHours: number;
+    includePrices: boolean;
+    priceCacheTtlHours: number;
     /**
      * True when neither options nor the environment supplied a username/token.
      * loadCollection()/loadWantlist() report this instead of throwing, so a

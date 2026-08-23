@@ -57,6 +57,8 @@ discogsCollection({
   imageCacheDir: 'src/assets/discogs-collection/cover-images', // must stay under src/ for astro:assets to optimize it
   cachePath: '.cache/discogs-collection/cache.json',
   cacheTtlHours: 6, // how long a cached API response stays valid before the next build re-fetches
+  includePrices: false, // fetch Discogs's price suggestions per release — see Pricing below
+  priceCacheTtlHours: 24, // how long cached price suggestions stay valid
 });
 ```
 
@@ -70,6 +72,31 @@ window. The client here pauses briefly whenever the response says the
 remaining budget is low, which only matters for very large collections —
 combined with the response cache (`cacheTtlHours`), a typical local dev
 loop touches the API once per TTL window, not once per rebuild.
+
+### Pricing
+
+Discogs doesn't return price data with the collection/wantlist itself, and
+has no bulk pricing endpoint — the only way to get a price is one
+`marketplace/price_suggestions` request per release. So it's opt-in via
+`includePrices: true`, and cached separately from (and longer than) the
+rest of the response cache via `priceCacheTtlHours`, since it's the more
+expensive part to re-fetch.
+
+When enabled, each `DiscogsRelease` gets:
+
+- `priceSuggestions` — Discogs's suggested price per condition grade (e.g.
+  `"Mint (M)"`, `"Very Good Plus (VG+)"`), or `null` if Discogs has no
+  suggestion for that release (not enough sales history) or the request
+  failed.
+- `averagePrice` — the mean of `priceSuggestions`' values, or `null`. This
+  is **not** an average *sold* price — Discogs doesn't expose sale history
+  through the API — just a convenience average across whatever condition
+  grades it did suggest a price for.
+
+For a large collection, the first build/dev run with `includePrices: true`
+takes noticeably longer (one request per release, rate-limited the same
+way as everything else) — subsequent runs are fast again until
+`priceCacheTtlHours` expires.
 
 ## Using the data
 
@@ -101,13 +128,15 @@ fetched once per TTL window.
 - `where` — combined with AND logic. Fields: `artist`/`title` (substring
   match), `genre`/`style`/`format` (a single value or array of allowed
   values — matches if the release has any of them), `minYear`/`maxYear`,
-  `minRating`.
-- `sortBy` — `'artist' | 'title' | 'year' | 'dateAdded' | 'rating'`.
+  `minRating`, `minPrice`/`maxPrice` (against `averagePrice` — see
+  Pricing; a release with no price data is excluded by either bound).
+- `sortBy` — `'artist' | 'title' | 'year' | 'dateAdded' | 'rating' | 'price'`.
 - `order` — `'asc' | 'desc'` (default `'asc'`).
 - `limit` — cap the result count.
 
 Other exports: `summarize(releases)` (total records, unique artists, all
-genres/styles present), `uniqueSorted(values)` (for building filter
+genres/styles present, plus `totalEstimatedValue`/`knownPriceCount` when
+prices were fetched), `uniqueSorted(values)` (for building filter
 dropdowns), and the `DiscogsRelease`/`DiscogsWhere` types.
 
 Every release, whether from the collection or the wantlist, is normalized
@@ -171,6 +200,10 @@ directly instead of through `getLocalCoverImage`), add this to your
 ## Development
 
 ```bash
-npm install   # installs deps and runs the build via the prepare script
+npm install   # installs deps
 npm run build # tsc -> dist/, plus copying client.d.ts
 ```
+
+`dist/` is committed to the repo (not gitignored) since this package is
+installed straight from GitHub, not built on install — run `npm run build`
+and commit the result after any change under `src/`.

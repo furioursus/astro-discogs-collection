@@ -2,6 +2,8 @@ export function summarize(releases) {
     const artists = new Set();
     const genres = new Set();
     const styles = new Set();
+    let totalEstimatedValue = 0;
+    let knownPriceCount = 0;
     for (const release of releases) {
         for (const artist of release.artists)
             artists.add(artist);
@@ -9,12 +11,18 @@ export function summarize(releases) {
             genres.add(genre);
         for (const style of release.styles)
             styles.add(style);
+        if (release.averagePrice !== null) {
+            totalEstimatedValue += release.averagePrice;
+            knownPriceCount += 1;
+        }
     }
     return {
         totalRecords: releases.length,
         uniqueArtists: artists.size,
         genres: uniqueSorted(genres),
         styles: uniqueSorted(styles),
+        totalEstimatedValue,
+        knownPriceCount,
     };
 }
 /** Deduplicates and alphabetizes a list of strings — handy for building filter dropdowns. */

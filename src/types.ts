@@ -1,6 +1,15 @@
 /** Which Discogs list a release came from. */
 export type DiscogsSource = 'collection' | 'wantlist';
 
+/** A single condition grade's suggested price, from Discogs's marketplace price_suggestions endpoint. */
+export interface PriceSuggestion {
+  currency: string;
+  value: number;
+}
+
+/** Keyed by condition grade, e.g. "Mint (M)", "Near Mint (NM or M-)", "Very Good Plus (VG+)". */
+export type PriceSuggestions = Record<string, PriceSuggestion>;
+
 /**
  * A release, normalized to the same flat shape whether it came from the
  * user's collection or wantlist — so query/collection code (and your own
@@ -32,4 +41,13 @@ export interface DiscogsRelease {
   /** Personal note text. Only ever set on wantlist entries. */
   notes: string | null;
   source: DiscogsSource;
+  /**
+   * Discogs's suggested price per condition grade, if fetched — only
+   * populated when the integration's `includePrices` option is on; null
+   * otherwise (or if Discogs has no suggestions for this release, e.g. not
+   * enough sales history).
+   */
+  priceSuggestions: PriceSuggestions | null;
+  /** Mean of `priceSuggestions`' per-condition values, or null if price data wasn't fetched/available. Discogs doesn't expose a single "average sale price" itself — this just averages across whatever condition grades it did return. */
+  averagePrice: number | null;
 }

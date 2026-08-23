@@ -1,5 +1,5 @@
 import { getConfig } from './config.js';
-import type { DiscogsRelease, DiscogsSource } from './types.js';
+import type { DiscogsRelease, DiscogsSource, PriceSuggestions } from './types.js';
 
 // Build-time only (imported from .astro frontmatter or the integration's
 // own hooks, both of which run in Node — never shipped to the browser).
@@ -131,6 +131,8 @@ function normalizeCollectionRelease(raw: RawCollectionRelease): DiscogsRelease {
     rating: raw.rating,
     notes: null,
     source: 'collection' as DiscogsSource,
+    priceSuggestions: null,
+    averagePrice: null,
   };
 }
 
@@ -142,6 +144,8 @@ function normalizeWantlistRelease(raw: RawWantlistRelease): DiscogsRelease {
     rating: raw.rating,
     notes: raw.notes ?? null,
     source: 'wantlist' as DiscogsSource,
+    priceSuggestions: null,
+    averagePrice: null,
   };
 }
 
@@ -166,4 +170,38 @@ export async function fetchWantlist(username: string): Promise<DiscogsRelease[]>
     (response) => response.wants
   );
   return raw.map(normalizeWantlistRelease);
+}
+
+/**
+ * Fetches Discogs's suggested price per condition grade for one release.
+ * There's no bulk version of this endpoint — it's one request per release,
+ * which is why `includePrices` is opt-in and cached separately (see
+ * collection-data.ts). Returns null if Discogs has no suggestions for this
+ * release (e.g. not enough sales history) — a 404 here is an expected
+ * outcome, not a failure; other errors (bad token, network) still throw.
+ */
+export async function fetchPriceSuggestions(releaseId: number): Promise<PriceSuggestions | null> {
+  const { token, userAgent } = getConfig();
+  const url = `${API_ROOT}/marketplace/price_suggestions/${releaseId}`;
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Discogs token=${token}`, 'User-Agent': userAgent },
+  });
+
+  if (response.status === 404) return null;
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(
+      `Discogs API error (${response.status}): ${response.statusText}${body ? `\n${body}` : ''} — ${url}`
+    );
+  }
+
+  const remaining = Number(response.headers.get('X-Discogs-Ratelimit-Remaining'));
+  if (Number.isFinite(remaining) && remaining <= 2) {
+    await sleep(2000);
+  }
+
+  const suggestions = (await response.json()) as PriceSuggestions;
+  return Object.keys(suggestions).length > 0 ? suggestions : null;
 }
