@@ -1,0 +1,88 @@
+---
+import { formatArtists, formatFormats, type DiscogsBasicInformation } from '../lib/discogs';
+
+interface Props {
+  release: { basic_information: DiscogsBasicInformation };
+}
+
+const { release } = Astro.props;
+const info = release.basic_information;
+const artists = formatArtists(release);
+const formats = formatFormats(release);
+---
+
+<article class="record-card" data-artist={artists.toLowerCase()} data-title={info.title.toLowerCase()}>
+  <a href={`https://www.discogs.com/release/${info.id}`} rel="noopener" target="_blank" class="cover-link">
+    <img
+      src={info.cover_image || info.thumb}
+      alt={`Cover art for ${info.title} by ${artists}`}
+      loading="lazy"
+      width="150"
+      height="150"
+    />
+  </a>
+  <div class="details">
+    <p class="artist">{artists}</p>
+    <h2 class="title">{info.title}</h2>
+    <p class="meta">
+      {info.year || 'Unknown year'} · {formats}
+    </p>
+    {info.styles?.length > 0 && (
+      <p class="styles">{info.styles.join(', ')}</p>
+    )}
+  </div>
+</article>
+
+<style>
+  .record-card {
+    display: flex;
+    gap: 0.9rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+  }
+
+  .cover-link {
+    flex-shrink: 0;
+  }
+
+  .cover-link img {
+    width: 5.5rem;
+    height: 5.5rem;
+    object-fit: cover;
+    border-radius: 0.25rem;
+    background: var(--border);
+    display: block;
+  }
+
+  .details {
+    min-width: 0;
+  }
+
+  .artist {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .title {
+    margin: 0.15rem 0;
+    font-size: 1rem;
+    line-height: 1.3;
+    overflow-wrap: break-word;
+  }
+
+  .meta {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .styles {
+    margin: 0.35rem 0 0;
+    font-size: 0.75rem;
+    color: var(--accent);
+  }
+</style>

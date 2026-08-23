@@ -1,0 +1,34 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import RecordCard from '../components/RecordCard.astro';
+import CrateFilter from '../components/CrateFilter.astro';
+import { fetchWantlist, discogsOptionsFromEnv } from '../lib/discogs';
+
+const wants = await fetchWantlist(discogsOptionsFromEnv());
+---
+
+<BaseLayout title="Wantlist" description="Records on my Discogs wantlist.">
+  <h1>Wantlist</h1>
+  <p class="count">{wants.length} record{wants.length === 1 ? '' : 's'}</p>
+
+  <CrateFilter />
+
+  <div class="grid" id="crate-grid">
+    {wants.map((want) => (
+      <RecordCard release={want} />
+    ))}
+  </div>
+</BaseLayout>
+
+<style>
+  .count {
+    color: var(--muted);
+    margin-top: -0.5rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    gap: 0.9rem;
+  }
+</style>
