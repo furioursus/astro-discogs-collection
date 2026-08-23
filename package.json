@@ -1,20 +1,35 @@
 {
-  "name": "astro-discogs-crate",
-  "type": "module",
+  "name": "astro-discogs-collection",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro check && astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+  "type": "module",
+  "description": "Astro integration for browsing a Discogs record collection/wantlist, fetched from the Discogs API at build/dev time.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./images": {
+      "types": "./dist/images.d.ts",
+      "default": "./dist/images.js"
+    },
+    "./client": "./dist/client.d.ts"
   },
-  "dependencies": {
-    "astro": "^7.2.4"
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && cp src/client.d.ts dist/client.d.ts",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "astro": "^7.0.0"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.4",
-    "typescript": "^5.7.3"
+    "@types/node": "^22.10.5",
+    "astro": "^7.1.6",
+    "typescript": "^5.6.3"
   }
 }
