@@ -1,8 +1,5 @@
+// Node/config-context entry — this is what astro.config.mjs imports as the default integration.
+// Data helpers (loadCollection, queryCollection, etc.) live under
+// `astro-discogs-collection/collection` instead of here; see collection-api.ts for why.
 export { default } from './integration.js';
 export type { DiscogsCollectionOptions } from './config.js';
-
-export { loadCollection, loadWantlist, type LoadedCollection } from './collection-data.js';
-export { queryCollection, type DiscogsWhere, type QueryOptions, type SortField, type SortOrder } from './query.js';
-export { summarize, uniqueSorted, type CollectionSummary } from './collection.js';
-
-export type { DiscogsRelease, DiscogsSource } from './types.js';

@@ -73,9 +73,15 @@ loop touches the API once per TTL window, not once per rebuild.
 
 ## Using the data
 
+`loadCollection()`/`queryCollection()`/etc. live under a separate
+`astro-discogs-collection/collection` subpath, not the main package export —
+importing them from the main entry would transitively pull in the
+integration (and its Vite-plugin-authoring code), which has no business in
+a page's SSR bundle. Same idea as `astro-discogs-collection/images` below.
+
 ```astro
 ---
-import { loadCollection, queryCollection } from 'astro-discogs-collection';
+import { loadCollection, queryCollection } from 'astro-discogs-collection/collection';
 
 const { releases, missingConfig, error } = await loadCollection();
 
